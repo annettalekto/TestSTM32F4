@@ -11,6 +11,9 @@
 #include "main.h"
 #include "can.h"
 
+
+
+
 void CAN_RegisterRxQueue(osMessageQId q);
 bool ReadQueueCAN(CAN_MSG* pmsg);
 

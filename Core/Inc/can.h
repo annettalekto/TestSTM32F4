@@ -6,6 +6,7 @@
  */
 
 #include "main.h"
+#include "can_rx.h"
 
 #ifndef INC_CAN_H_
 #define INC_CAN_H_

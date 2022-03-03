@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -43,6 +44,8 @@
 /* Private variables ---------------------------------------------------------*/
 CAN_HandleTypeDef hcan1;
 
+CRC_HandleTypeDef hcrc;
+
 osThreadId Task1Handle;
 osThreadId Task2Handle;
 osMessageQId Queue1Handle;
@@ -59,6 +62,7 @@ osMessageQId Queue1Handle;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_CAN1_Init(void);
+static void MX_CRC_Init(void);
 void StartTask1(void const * argument);
 void StartTask2(void const * argument);
 
@@ -102,6 +106,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_CAN1_Init();
+  MX_CRC_Init();
   /* USER CODE BEGIN 2 */
 
 
@@ -130,33 +135,63 @@ int main(void)
 
   /* Create the queue(s) */
   /* definition and creation of Queue1 */
-  osMessageQDef(Queue1, 16, CAN_MSG);
-  Queue1Handle = osMessageCreate(osMessageQ(Queue1), NULL);
+  //osMessageQDef(Queue1, 16, CAN_MSG);
+  //Queue1Handle = osMessageCreate(osMessageQ(Queue1), NULL);
 
   /* USER CODE BEGIN RTOS_QUEUES */
-  CAN_RegisterRxQueue(Queue1Handle);
+  //CAN_RegisterRxQueue(Queue1Handle);
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
   /* definition and creation of Task1 */
-  osThreadDef(Task1, StartTask1, osPriorityNormal, 0, 128);
-  Task1Handle = osThreadCreate(osThread(Task1), NULL);
+  //osThreadDef(Task1, StartTask1, osPriorityNormal, 0, 128);
+  //Task1Handle = osThreadCreate(osThread(Task1), NULL);
 
   /* definition and creation of Task2 */
-  osThreadDef(Task2, StartTask2, osPriorityNormal, 0, 128);
-  Task2Handle = osThreadCreate(osThread(Task2), NULL);
+  //osThreadDef(Task2, StartTask2, osPriorityNormal, 0, 128);
+  //Task2Handle = osThreadCreate(osThread(Task2), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
-  osKernelStart();
+  //osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   printf("START\n");
+
+
+  if (HAL_FLASH_Unlock() != HAL_OK)
+  {
+	  printf("\tERROR Flash unlock!\n");
+  }
+  union FlashData WriteBuf;
+  union FlashData ReadBuf;
+
+  WriteBuf.DeviceConfig.ConfigCAN.ID = 1;
+  WriteBuf.DeviceConfig.Sensor.Level = 2;
+  WriteBuf.DeviceConfig.WriteCounter = 3;
+  WriteBuf.DeviceConfig.Crc = 4;
+
+  //-----------------------------------
+	// 0) чтение
+  ReadConfig(ReadBuf.DataWords);
+
+	// 1) стирание
+  EraseFlash();
+  ReadConfig(ReadBuf.DataWords);
+
+	// 2) запись
+  WriteConfig(WriteBuf.DataWords);
+
+	// 3) чтение
+  ReadConfig(ReadBuf.DataWords);
+	//-----------------------------------
+	HAL_FLASH_Lock();
+
   while (1)
   {
 
@@ -183,11 +218,12 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 4;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 8;
   RCC_OscInitStruct.PLL.PLLN = 64;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
@@ -202,7 +238,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
@@ -265,6 +301,32 @@ static void MX_CAN1_Init(void)
 }
 
 /**
+  * @brief CRC Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_CRC_Init(void)
+{
+
+  /* USER CODE BEGIN CRC_Init 0 */
+
+  /* USER CODE END CRC_Init 0 */
+
+  /* USER CODE BEGIN CRC_Init 1 */
+
+  /* USER CODE END CRC_Init 1 */
+  hcrc.Instance = CRC;
+  if (HAL_CRC_Init(&hcrc) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN CRC_Init 2 */
+
+  /* USER CODE END CRC_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -274,7 +336,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
 

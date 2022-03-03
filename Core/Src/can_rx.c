@@ -42,9 +42,8 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 
 void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
 {
-    uint32_t err = HAL_CAN_GetError(&hcan);
+    HAL_CAN_GetError(hcan);
     printf("ERROR CAN\n");
-
 }
 
 bool ReadQueueCAN(CAN_MSG* pmsg)

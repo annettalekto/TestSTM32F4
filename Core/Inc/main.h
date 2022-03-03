@@ -36,6 +36,7 @@ extern "C" {
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
+#include "flash.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
