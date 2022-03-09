@@ -37,6 +37,7 @@ extern "C" {
 #include <string.h>
 #include <stdlib.h>
 #include "flash.h"
+#include "zsc.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

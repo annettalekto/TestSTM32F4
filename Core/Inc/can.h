@@ -21,5 +21,9 @@ typedef struct can_msg
 } CAN_MSG;
 
 void CAN_Start(CAN_HandleTypeDef *hcan);
+bool CAN_InitADD(PCONFIG_CAN pdata);
+bool CAN_ConfigFilter(PCONFIG_CAN pdata);
+bool CheckConfData(PCONFIG_CAN pdata);
+bool CAN_Send(CAN_MSG * msg);
 
 #endif /* INC_CAN_H_ */

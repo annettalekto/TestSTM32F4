@@ -7,9 +7,34 @@
 
 #include "flash.h"
 
+SENSOR_SETTINGS SensorSettings;
+CONFIG_CAN ConfigCAN;
+
 extern CRC_HandleTypeDef hcrc;
 
-void ReadConfig(uint32_t* RxBuf)
+// --------------------------- конфигурация CAN ------------------------------ //
+uint32_t GetConfigCANID(void)
+{
+	return ConfigCAN.ID;
+}
+// --------------------------- пределы датчика ------------------------------ //
+SENSOR_SETTINGS GetSensorSettings(void)
+{
+	return SensorSettings;
+}
+
+void SaveSensorSettings(SENSOR_SETTINGS newSS)
+{
+	SensorSettings = newSS;
+}
+
+void SaveFlashSensorSettings(SENSOR_SETTINGS newSS)
+{
+	SensorSettings = newSS;// todo
+}
+
+// --------------------------------- FLASH --------------------------------- //
+/*void ReadConfig(uint32_t* RxBuf)
 {
 	uint32_t address = FLASH_CONFIG_START_ADDR;
 	int idx = 0;
@@ -56,7 +81,7 @@ void WriteConfig(uint32_t *WxBuf)
 		address += 4;
 	}
 }
-
+*/
 
 
 /*

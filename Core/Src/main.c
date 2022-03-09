@@ -46,9 +46,10 @@ CAN_HandleTypeDef hcan1;
 
 CRC_HandleTypeDef hcrc;
 
-osThreadId Task1Handle;
-osThreadId Task2Handle;
-osMessageQId Queue1Handle;
+osThreadId MsgProcessingTaHandle;
+osThreadId TaskZSCHandle;
+osThreadId TaskFLASHHandle;
+osMessageQId RxQueueCANHandle;
 /* USER CODE BEGIN PV */
 //CAN_TxHeaderTypeDef TxHeader;
 //CAN_RxHeaderTypeDef RxHeader;
@@ -63,8 +64,9 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_CAN1_Init(void);
 static void MX_CRC_Init(void);
-void StartTask1(void const * argument);
-void StartTask2(void const * argument);
+void StartMsgProcessingTask(void const * argument);
+void StartTaskZSC(void const * argument);
+void StartTaskFLASH(void const * argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -134,63 +136,38 @@ int main(void)
   /* USER CODE END RTOS_TIMERS */
 
   /* Create the queue(s) */
-  /* definition and creation of Queue1 */
-  //osMessageQDef(Queue1, 16, CAN_MSG);
-  //Queue1Handle = osMessageCreate(osMessageQ(Queue1), NULL);
+  /* definition and creation of RxQueueCAN */
+  osMessageQDef(RxQueueCAN, 16, CAN_MSG);
+  RxQueueCANHandle = osMessageCreate(osMessageQ(RxQueueCAN), NULL);
 
   /* USER CODE BEGIN RTOS_QUEUES */
-  //CAN_RegisterRxQueue(Queue1Handle);
+  CAN_RegisterRxQueue(RxQueueCANHandle);
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* definition and creation of Task1 */
-  //osThreadDef(Task1, StartTask1, osPriorityNormal, 0, 128);
-  //Task1Handle = osThreadCreate(osThread(Task1), NULL);
+  /* definition and creation of MsgProcessingTa */
+  osThreadDef(MsgProcessingTa, StartMsgProcessingTask, osPriorityNormal, 0, 128);
+  MsgProcessingTaHandle = osThreadCreate(osThread(MsgProcessingTa), NULL);
 
-  /* definition and creation of Task2 */
-  //osThreadDef(Task2, StartTask2, osPriorityNormal, 0, 128);
-  //Task2Handle = osThreadCreate(osThread(Task2), NULL);
+  /* definition and creation of TaskZSC */
+  osThreadDef(TaskZSC, StartTaskZSC, osPriorityNormal, 0, 128);
+  TaskZSCHandle = osThreadCreate(osThread(TaskZSC), NULL);
+
+  /* definition and creation of TaskFLASH */
+  osThreadDef(TaskFLASH, StartTaskFLASH, osPriorityIdle, 0, 128);
+  TaskFLASHHandle = osThreadCreate(osThread(TaskFLASH), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
-  //osKernelStart();
+  osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   printf("START\n");
-
-
-  if (HAL_FLASH_Unlock() != HAL_OK)
-  {
-	  printf("\tERROR Flash unlock!\n");
-  }
-  union FlashData WriteBuf;
-  union FlashData ReadBuf;
-
-  WriteBuf.DeviceConfig.ConfigCAN.ID = 1;
-  WriteBuf.DeviceConfig.Sensor.Level = 2;
-  WriteBuf.DeviceConfig.WriteCounter = 3;
-  WriteBuf.DeviceConfig.Crc = 4;
-
-  //-----------------------------------
-	// 0) чтение
-  ReadConfig(ReadBuf.DataWords);
-
-	// 1) стирание
-  EraseFlash();
-  ReadConfig(ReadBuf.DataWords);
-
-	// 2) запись
-  WriteConfig(WriteBuf.DataWords);
-
-	// 3) чтение
-  ReadConfig(ReadBuf.DataWords);
-	//-----------------------------------
-	HAL_FLASH_Lock();
 
   while (1)
   {
@@ -379,74 +356,95 @@ int _write(int fd, char* ptr, int len) {
 }*/
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_StartTask1 */
+/* USER CODE BEGIN Header_StartMsgProcessingTask */
 /**
-  * @brief  Function implementing the Task1 thread.
+  * @brief  Function implementing the MsgProcessingTa thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartTask1 */
-void StartTask1(void const * argument)
+/* USER CODE END Header_StartMsgProcessingTask */
+void StartMsgProcessingTask(void const * argument)
 {
   /* USER CODE BEGIN 5 */
-	CAN_TxHeaderTypeDef TxHeader;
-//	CAN_RxHeaderTypeDef RxHeader;
-	uint8_t TxData[8];// = {0,};
-//	uint8_t RxData[8];
-	uint32_t TxMailbox = 0;
-
-	TxHeader.StdId = 0x200;
-	TxHeader.IDE = CAN_ID_STD;
-	TxHeader.ExtId = 0;
-	TxHeader.DLC = 1;
-	TxHeader.RTR = CAN_RTR_DATA;
-	TxHeader.TransmitGlobalTime = DISABLE;
-	TxData[0] = 0xAA;
   /* Infinite loop */
   for(;;)
   {
-	  if(HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, &TxMailbox) != HAL_OK)
-	  {
-		  printf("Send ERROR\n");
-	  }
-	  else
-	  {
-		  printf("Send OK\n");
 
-		HAL_GPIO_TogglePin(RedLight_GPIO_Port, RedLight_Pin);
+//	  printf("Test: %X \n",CAN_BS1_1TQ);
+//	  printf("Test: %X \n",CAN_BS1_2TQ);
+//	  printf("Test: %X \n",CAN_BS1_3TQ);
+//	  printf("Test: %X \n",CAN_BS1_4TQ);
+//	  printf("Test: %X \n",CAN_BS1_5TQ);
+//	  printf("Test: %X \n",CAN_BS1_6TQ);
+//	  printf("Test: %X \n",CAN_BS1_7TQ);
+//	  printf("Test: %X \n",CAN_BS1_8TQ);
+//	  printf("Test: %X \n",CAN_BS1_9TQ);
+//	  printf("Test: %X \n",CAN_BS1_10TQ);
+//	  printf("Test: %X \n",CAN_BS1_11TQ);
+//	  printf("Test: %X \n",CAN_BS1_12TQ);
+//	  printf("Test: %X \n",CAN_BS1_13TQ); //CAN_BS1_13TQ = 0xC0000
+//	  uint32_t temp = 12;
+//	  uint32_t number = temp << CAN_BTR_TS1_Pos;
+//	  printf("Test: %X \n",number);
+//	  printf("Test: %X \n",CAN_BS1_14TQ);
+//	  printf("Test: %X \n",CAN_BS1_15TQ);
+//	  printf("Test: %X \n",CAN_BS1_16TQ);
+
+	  CONFIG_CAN q;
+	  q.BaudRate = 50;
+	  q.ID = 0x201;
+	  q.Tseg1 = 12;
+	  q.Tseg2 = 1;
+	  q.UpLimit = 10;
+	  CAN_InitADD(&q);
 		osDelay(500);
-		HAL_GPIO_TogglePin(RedLight_GPIO_Port, RedLight_Pin);
-		osDelay(500);
-	  }
   }
   /* USER CODE END 5 */
 }
 
-/* USER CODE BEGIN Header_StartTask2 */
+/* USER CODE BEGIN Header_StartTaskZSC */
 /**
-* @brief Function implementing the Task2 thread.
+* @brief Function implementing the TaskZSC thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartTask2 */
-void StartTask2(void const * argument)
+/* USER CODE END Header_StartTaskZSC */
+void StartTaskZSC(void const * argument)
 {
-  /* USER CODE BEGIN StartTask2 */
-  CAN_MSG msg;
+  /* USER CODE BEGIN StartTaskZSC */
   /* Infinite loop */
   for(;;)
   {
-	if (ReadQueueCAN(&msg))
-	{
-		printf("Task2 Receive msg: 0x%X\n", msg.id);
-
-		HAL_GPIO_TogglePin(GreenLigh_GPIO_Port, GreenLigh_Pin);
-		osDelay(500);
-		HAL_GPIO_TogglePin(GreenLigh_GPIO_Port, GreenLigh_Pin);
-		osDelay(500);
-	}
+    osDelay(1);
   }
-  /* USER CODE END StartTask2 */
+  /* USER CODE END StartTaskZSC */
+}
+
+/* USER CODE BEGIN Header_StartTaskFLASH */
+/**
+* @brief Function implementing the TaskFLASH thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTaskFLASH */
+void StartTaskFLASH(void const * argument)
+{
+  /* USER CODE BEGIN StartTaskFLASH */
+  /* Infinite loop */
+  for(;;)
+  {
+	  //(не подходит) 1 постоянно считывать флэш и сравнивать со структурой, если разные значит нужно сохранить
+	  //2 сохранять по флагу
+
+	  //сохранение при: режим настроек, пришли "верные" настройки + сообщение было с пометкой "сохранить в память"
+
+	  // сохранить в 3 местах
+	  // проверить сохранение с CRC
+	  // отправить ответное сообщение о завершении сохранения
+
+    osDelay(1);
+  }
+  /* USER CODE END StartTaskFLASH */
 }
 
 /**
