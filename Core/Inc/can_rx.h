@@ -11,6 +11,9 @@
 #include "main.h"
 #include "can.h"
 
+#define CONFIGURATION_LIMITS_CODE	0xC841D2F7U // код настройки пределов измерения
+#define CONFIGURATION_CAN_CODE		0x7F2D148CU // код настройки скорости и ИД CAN
+
 // коды для настройки пределов давления
 #define ANSWER_CODE            0x55	// сообщения относятся к настройке 0
 #define LIMIT_CALIBRATION_CODE 0xAA	// сообщения относятся к настройке 1; отправить границы и значение
@@ -20,6 +23,8 @@
 #define HIGH_LIMIT_SAVE_CODE   0x35	// верхний предел и дата, сохранить
 #define ALL_LIMIT_SAVE_CODE    0x45	// в и н пределы, дата, сохранить
 
+bool CheckConfigurationCANCode(void);
+void ResetConfigurationCANCode(void);
 void CAN_RegisterRxQueue(osMessageQId q);
 bool ReadQueueCAN(CAN_MSG* pmsg);
 void CodeProcessing(CAN_MSG* inMsg);

@@ -7,10 +7,9 @@
 
 #include "can.h"
 
-
 static CAN_HandleTypeDef *canHandle = NULL;
 
-void CAN_Start(CAN_HandleTypeDef *hcan)
+void StartCAN(CAN_HandleTypeDef *hcan)
 {
 	canHandle = hcan;
 	if (HAL_CAN_ActivateNotification(canHandle, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE) != HAL_OK)
@@ -24,25 +23,25 @@ void CAN_Start(CAN_HandleTypeDef *hcan)
 }
 
 // инициализация CAN
-bool CAN_InitADD(PCONFIG_CAN pdata) // отладка закончилась туть todo1 переименовать
+bool InitCAN(PCONFIG_CAN pdata) // отладка закончилась туть todo1 переименовать
 {
-
 	/*
 	 * тут рассчитывается скорость, выдавать в кан после расчета скорость на которую он собирается перейти (иниц пока нет)
 	 * выдавать скорость и др параметры в кан одним сообщением сразу после включения в нормальный режим (а надо ли?)
 	 * */
+	//предделитель 80 при APB1 = 32МГц, на скорость 25: 32 000/25 = 1280; 1280 = 80 * 16
   uint32_t clk = HAL_RCC_GetPCLK1Freq()/1000;// = 32000
   uint32_t quanta = (uint32_t)(1 + (pdata->Tseg1 + 1) + (pdata->Tseg2 + 1)); //16
   uint32_t prescaler = clk / (quanta * pdata->BaudRate); // prescaler = (clk/1000) / (BR * Q)  -> 32 000 / 50 * 16 = 40
 
   canHandle->Instance = CAN1;
-  canHandle->Init.Prescaler = prescaler;//40;
+  canHandle->Init.Prescaler = prescaler;//80;
   canHandle->Init.Mode = CAN_MODE_NORMAL;
   canHandle->Init.SyncJumpWidth = CAN_SJW_1TQ;//??? для каких то скоростей понадобиться todo решить этот вопрос таблицей
   canHandle->Init.TimeSeg1 = (pdata->Tseg1 << CAN_BTR_TS1_Pos);// CAN_BS1_13TQ = 0xC0000
   canHandle->Init.TimeSeg2 = (pdata->Tseg2 << CAN_BTR_TS2_Pos);
   canHandle->Init.TimeTriggeredMode = DISABLE;
-  canHandle->Init.AutoBusOff = DISABLE;//вкл
+  canHandle->Init.AutoBusOff = ENABLE;
   canHandle->Init.AutoWakeUp = DISABLE;
   canHandle->Init.AutoRetransmission = DISABLE;
   canHandle->Init.ReceiveFifoLocked = DISABLE;
@@ -57,7 +56,8 @@ bool CAN_InitADD(PCONFIG_CAN pdata) // отладка закончилась т�
   return true;
 }
 
-bool CAN_ConfigFilter(PCONFIG_CAN pdata) // на прием одного ИД
+// todo1 нет смысла отделять
+bool ConfigFilterCAN(PCONFIG_CAN pdata) // на прием одного ИД
 {
   CAN_FilterTypeDef sFilterConfig;
   uint32_t id = (uint32_t)pdata->ID;
@@ -81,8 +81,22 @@ bool CAN_ConfigFilter(PCONFIG_CAN pdata) // на прием одного ИД
   return true;
 }
 
+void ResetConfigCAN(void)
+{
+	CONFIG_CAN configData;
+//предделитель 80 при APB1 = 32МГц, на скорость 25: 32 000/25 = 1280; 1280 = 80 * 16
+	configData.BaudRate = 25;
+	configData.ID = 0x01;
+	configData.Tseg1 = 12; // CAN_BS1_13TQ
+	configData.Tseg2 = 1; // CAN_BS2_2TQ
+	configData.UpLimit = 0;
+	InitCAN(&configData);
+
+	// фильтры?
+}
+
 // проверка данных для инициализации CAN.
-bool CheckConfData(PCONFIG_CAN pdata)
+bool CheckConfigData(PCONFIG_CAN pdata)
 {
   uint32_t id = pdata->ID;
   uint32_t bitSeg1 = pdata->Tseg1 + 1; // 1 - 16

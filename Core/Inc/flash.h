@@ -34,6 +34,8 @@ union FlashData {
 
 /////////////////////////////////// структуры стек:
 
+#define FLASH_DATA_SIZE	8	//  8 по 32
+
 typedef struct ConfigDataCAN_
 {
   uint32_t ID;              // при расширенноми идентификаторе старший бит старшего байта = 1
@@ -58,8 +60,8 @@ typedef struct
 	CONFIG_CAN ConfigCAN;
 } DeviceConfigType;
 
-union FlashData {
-	DeviceConfigType DeviceConfig; // кратно 64! 8 по 32
+union FlashData {		// кратно 64!
+	DeviceConfigType DeviceConfig;
 	uint32_t DataWords[8];
 };
 

@@ -12,9 +12,19 @@ bool SendLimits();
 bool SendLimitsAndValueZSC();
 
 QueueHandle_t rxQueue = NULL;
+bool configurationCANCode = false;
 
 extern volatile SENSOR_SETTINGS SensorSettings; //zsc.c
 
+bool CheckConfigurationCANCode(void)
+{
+	return configurationCANCode;
+}
+
+void ResetConfigurationCANCode(void)
+{
+	configurationCANCode = false;
+}
 
 void CAN_RegisterRxQueue(osMessageQId q)
 {
@@ -64,8 +74,6 @@ bool ReadQueueCAN(CAN_MSG* pmsg)
 
 void CodeProcessing(CAN_MSG* inMsg)
 {
-//	+ проверку на код конфиг и настройки
-
 	// ответ на запрос:
 	if (inMsg->rtr)
 	{
@@ -76,6 +84,21 @@ void CodeProcessing(CAN_MSG* inMsg)
 	if (inMsg->data[0] == ANSWER_CODE) //55
 	{
 		SendPressure();
+		return;
+	}
+
+	// код для настройки CAN:
+	uint32_t code = ( ((uint32_t)inMsg->data[4] << 24) | ((uint32_t)inMsg->data[5] << 16) | ((uint32_t)inMsg->data[6] << 8) | (uint32_t)inMsg->data[7] );
+	if (code == CONFIGURATION_CAN_CODE)
+	{
+		configurationCAN = true; // код принят и проверен
+		return;
+	}
+	// код для настройки пределов:
+	if (code == CONFIGURATION_LIMITS_CODE)
+	{
+		// ответить
+		SendLimits();
 		return;
 	}
 

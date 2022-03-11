@@ -34,12 +34,13 @@ void SaveFlashSensorSettings(SENSOR_SETTINGS newSS)
 }
 
 // --------------------------------- FLASH --------------------------------- //
-/*void ReadConfig(uint32_t* RxBuf)
+
+void ReadConfig(uint32_t* RxBuf)
 {
 	uint32_t address = FLASH_CONFIG_START_ADDR;
 	int idx = 0;
 
-	while (idx < 4)
+	while (idx < FLASH_DATA_SIZE)
 	{
 		RxBuf[idx] = *(__IO uint32_t *)address;
 		idx++;
@@ -70,7 +71,7 @@ void WriteConfig(uint32_t *WxBuf)
 	uint32_t address = FLASH_CONFIG_START_ADDR;
 	int idx = 0;
 
-	while (idx < 4)
+	while (idx < FLASH_DATA_SIZE)
 	{
 		if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, address, WxBuf[idx]) != HAL_OK)
 //		if (FLASH_Program_Word(FLASH_TYPEPROGRAM_WORD, address, *WxBuf) != HAL_OK)
@@ -81,14 +82,44 @@ void WriteConfig(uint32_t *WxBuf)
 		address += 4;
 	}
 }
-*/
 
 
 /*
 CRC(data + CRC(data)) == 0.
-если мы вычислили CRC и добавили его к данным — вычисление CRC этого пакета должно дать 0. Таким образом, на принимающей стороне достаточно проверить, что CRC принятых данных равен 0 — значит, данные пришли полностью.
+если мы вычислили CRC и добавили его к данным — вычисление CRC этого пакета должно дать 0.
+Таким образом, на принимающей стороне достаточно проверить, что CRC принятых данных равен 0 — значит, данные пришли полностью.
 
 	uint32_t CRCVal = HAL_CRC_Calculate(&hcrc, (uint32_t *)WxBuf, sizeof(WxBuf)/sizeof(uint32_t));
 
 Писать структуру можно сразу в нескольких местах с некоторым смещением по сектору, если не считанно с 0 смещения правильно, считать с 0+number
+
+Можно разделить и писать две  структуры по разным адресам, чтобы не стирать обе из-за перезаписи одной
+Но стерается весь сектор... так что либо писать в разные сектора либо нет смысла см МК 103
 */
+
+/* USER CODE BEGIN Header_StartTaskFLASH */
+/**
+* @brief Function implementing the TaskFLASH thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTaskFLASH */
+void StartTaskFLASH(void const * argument)
+{
+  /* USER CODE BEGIN StartTaskFLASH */
+  /* Infinite loop */
+  for(;;)
+  {
+	  // (не подходит) 1 постоянно считывать флэш и сравнивать со структурой, если разные значит нужно сохранить
+	  // 2 сохранять по флагу
+
+	  // сохранение при: режим настроек, пришли "верные" настройки + сообщение было с пометкой "сохранить в память"
+
+	  // сохранить в 3 местах
+	  // проверить сохранение с CRC
+	  // отправить ответное сообщение о завершении сохранения
+
+    osDelay(1);
+  }
+  /* USER CODE END StartTaskFLASH */
+}

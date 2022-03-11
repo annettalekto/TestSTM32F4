@@ -20,10 +20,11 @@ typedef struct can_msg
   uint8_t data[CAN_MAX_DATA_SIZE];
 } CAN_MSG;
 
-void CAN_Start(CAN_HandleTypeDef *hcan);
-bool CAN_InitADD(PCONFIG_CAN pdata);
-bool CAN_ConfigFilter(PCONFIG_CAN pdata);
-bool CheckConfData(PCONFIG_CAN pdata);
+void StartCAN(CAN_HandleTypeDef *hcan);
+bool InitCAN(PCONFIG_CAN pdata);
+bool ConfigFilterCAN(PCONFIG_CAN pdata);
+bool CheckConfigData(PCONFIG_CAN pdata);
+void ResetConfigCAN(void);
 bool CAN_Send(CAN_MSG * msg);
 
 #endif /* INC_CAN_H_ */

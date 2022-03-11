@@ -45,3 +45,22 @@ DATA_ZSC GetPressureZSC(void)
 
 	return pressure;
 }
+
+/* USER CODE BEGIN Header_StartTaskZSC */
+/**
+* @brief Function implementing the TaskZSC thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTaskZSC */
+void StartTaskZSC(void const * argument)
+{
+  /* USER CODE BEGIN StartTaskZSC */
+  /* Infinite loop */
+  for(;;)
+  {
+	  // прием данных от микросхемы
+    osDelay(1);
+  }
+  /* USER CODE END StartTaskZSC */
+}

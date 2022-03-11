@@ -65,8 +65,8 @@ static void MX_GPIO_Init(void);
 static void MX_CAN1_Init(void);
 static void MX_CRC_Init(void);
 void StartMsgProcessingTask(void const * argument);
-void StartTaskZSC(void const * argument);
-void StartTaskFLASH(void const * argument);
+extern void StartTaskZSC(void const * argument);
+extern void StartTaskFLASH(void const * argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -111,16 +111,8 @@ int main(void)
   MX_CRC_Init();
   /* USER CODE BEGIN 2 */
 
-
-//  if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE) != HAL_OK)
-//  {
-//	  printf("Enable interrupts CAN ERROR\n");
-//  }
-//  if (HAL_CAN_Start(&hcan1) != HAL_OK)
-//  {
-//	  printf("Start CAN ERROR\n");
-//  }
-  CAN_Start(&hcan1);
+  StartCAN(&hcan1);
+  // todo получить данные из памяти
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -159,6 +151,28 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  printf("START\n");
+
+  HAL_GPIO_WritePin(RedLight_GPIO_Port, RedLight_Pin, 1);
+  HAL_GPIO_WritePin(GreenLigh_GPIO_Port, GreenLigh_Pin, 1);
+
+  uint32_t startTime = HAL_GetTick();
+  while((HAL_GetTick() - startTime) < 1500)
+  {
+	  // ждем прихода кода для настройки
+	  if (CheckConfigurationCANCode())
+	  {
+		// todo
+		// 2-инит кан 25,0 ждать настройки,
+		// записать в память зачем то
+		// не переписывать пределы!
+
+		  ResetConfigurationCANCode();
+	  }
+  }
+  HAL_GPIO_WritePin(RedLight_GPIO_Port, RedLight_Pin, 0);
+  HAL_GPIO_WritePin(GreenLigh_GPIO_Port, GreenLigh_Pin, 0);
+  // todo если код настройки не пришел, инициализируемя из памяти
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
@@ -167,7 +181,6 @@ int main(void)
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  printf("START\n");
 
   while (1)
   {
@@ -232,15 +245,16 @@ static void MX_CAN1_Init(void)
 {
 
   /* USER CODE BEGIN CAN1_Init 0 */
+  // после вкл питания на ~1 сек делаем 25 кбит/сек �?Д 0, фильтр на  прием кодов 7FF
+  //предделитель 80 при APB1 = 32МГц, на скорость 25: 32 000/25 = 1280; 1280 = 80 * 16
 	CAN_FilterTypeDef  sFilterConfig;
 
   /* USER CODE END CAN1_Init 0 */
 
   /* USER CODE BEGIN CAN1_Init 1 */
-  // после вкл питания на ~1 сек делаем 25 кбит/сек �?Д 7FF 
   /* USER CODE END CAN1_Init 1 */
   hcan1.Instance = CAN1;
-  hcan1.Init.Prescaler = 40;
+  hcan1.Init.Prescaler = 80;
   hcan1.Init.Mode = CAN_MODE_NORMAL;
   hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan1.Init.TimeSeg1 = CAN_BS1_13TQ;
@@ -256,7 +270,7 @@ static void MX_CAN1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN1_Init 2 */
-  // для расширенного �?Д сдвигать по другому!
+  // для расширенного  ИД сдвигать по другому!
   sFilterConfig.FilterBank = 0; 
   sFilterConfig.FilterMode = CAN_FILTERMODE_IDLIST;
   sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
@@ -366,85 +380,18 @@ int _write(int fd, char* ptr, int len) {
 void StartMsgProcessingTask(void const * argument)
 {
   /* USER CODE BEGIN 5 */
+	CAN_MSG msg;
   /* Infinite loop */
   for(;;)
   {
-
-//	  printf("Test: %X \n",CAN_BS1_1TQ);
-//	  printf("Test: %X \n",CAN_BS1_2TQ);
-//	  printf("Test: %X \n",CAN_BS1_3TQ);
-//	  printf("Test: %X \n",CAN_BS1_4TQ);
-//	  printf("Test: %X \n",CAN_BS1_5TQ);
-//	  printf("Test: %X \n",CAN_BS1_6TQ);
-//	  printf("Test: %X \n",CAN_BS1_7TQ);
-//	  printf("Test: %X \n",CAN_BS1_8TQ);
-//	  printf("Test: %X \n",CAN_BS1_9TQ);
-//	  printf("Test: %X \n",CAN_BS1_10TQ);
-//	  printf("Test: %X \n",CAN_BS1_11TQ);
-//	  printf("Test: %X \n",CAN_BS1_12TQ);
-//	  printf("Test: %X \n",CAN_BS1_13TQ); //CAN_BS1_13TQ = 0xC0000
-//	  uint32_t temp = 12;
-//	  uint32_t number = temp << CAN_BTR_TS1_Pos;
-//	  printf("Test: %X \n",number);
-//	  printf("Test: %X \n",CAN_BS1_14TQ);
-//	  printf("Test: %X \n",CAN_BS1_15TQ);
-//	  printf("Test: %X \n",CAN_BS1_16TQ);
-
-	  CONFIG_CAN q;
-	  q.BaudRate = 50;
-	  q.ID = 0x201;
-	  q.Tseg1 = 12;
-	  q.Tseg2 = 1;
-	  q.UpLimit = 10;
-	  CAN_InitADD(&q);
-		osDelay(500);
+	  if (pdTRUE == xQueueReceive(RxQueueCANHandle, &msg, 0))
+	  {
+		  printf("Task Receive msg: 0x%X\n", msg.id);
+		  CodeProcessing(&msg);
+	  }
+		osDelay(1);
   }
   /* USER CODE END 5 */
-}
-
-/* USER CODE BEGIN Header_StartTaskZSC */
-/**
-* @brief Function implementing the TaskZSC thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartTaskZSC */
-void StartTaskZSC(void const * argument)
-{
-  /* USER CODE BEGIN StartTaskZSC */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END StartTaskZSC */
-}
-
-/* USER CODE BEGIN Header_StartTaskFLASH */
-/**
-* @brief Function implementing the TaskFLASH thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartTaskFLASH */
-void StartTaskFLASH(void const * argument)
-{
-  /* USER CODE BEGIN StartTaskFLASH */
-  /* Infinite loop */
-  for(;;)
-  {
-	  //(не подходит) 1 постоянно считывать флэш и сравнивать со структурой, если разные значит нужно сохранить
-	  //2 сохранять по флагу
-
-	  //сохранение при: режим настроек, пришли "верные" настройки + сообщение было с пометкой "сохранить в память"
-
-	  // сохранить в 3 местах
-	  // проверить сохранение с CRC
-	  // отправить ответное сообщение о завершении сохранения
-
-    osDelay(1);
-  }
-  /* USER CODE END StartTaskFLASH */
 }
 
 /**
