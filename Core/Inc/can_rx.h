@@ -14,6 +14,8 @@
 #define CONFIGURATION_LIMITS_CODE	0xC841D2F7U // код настройки пределов измерения
 #define CONFIGURATION_CAN_CODE		0x7F2D148CU // код настройки скорости и ИД CAN
 
+#define CONFIGURATION_CAN_ID		0x00
+
 // коды для настройки пределов давления
 #define ANSWER_CODE            0x55	// сообщения относятся к настройке 0
 #define LIMIT_CALIBRATION_CODE 0xAA	// сообщения относятся к настройке 1; отправить границы и значение

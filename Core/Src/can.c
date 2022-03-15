@@ -124,7 +124,27 @@ bool CheckConfigData(PCONFIG_CAN pdata)
   return ok;
 }
 
-bool CAN_Send(CAN_MSG * msg)
+bool SaveConfigData(CAN_MSG* msg)
+{
+	CONFIG_CAN confData;
+
+	confData.ID = (uint32_t)( ((uint32_t)msg->data[0] << 24) | ((uint32_t)msg->data[1] << 16) | ((uint32_t)msg->data[2] << 8) | ((uint32_t)msg->data[3]) );
+	confData.BaudRate = ( ((uint32_t) msg->data[4] << 8) | ((uint32_t) msg->data[5]) );
+	confData.Tseg1 = ((uint32_t) msg->data[6] >> 4);
+	confData.Tseg2 = ((uint32_t) msg->data[6] & 0x07);
+	confData.UpLimit = ((uint32_t) msg->data[7]);
+	// фильтры опущены todo
+	// обработка расширенного ИД опущена todo
+
+	if (CheckConfigData(&confData))
+	{
+		// todo +сохранение
+		return true;
+	}
+	return false;
+}
+
+bool CAN_Send(CAN_MSG* msg)
 {
   // if (!isActiveCAN() || (NULL == msg) || !readyTransmitCAN()) { //todo
   //   return false;

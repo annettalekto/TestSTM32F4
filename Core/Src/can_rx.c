@@ -14,7 +14,7 @@ bool SendLimitsAndValueZSC();
 QueueHandle_t rxQueue = NULL;
 bool configurationCANCode = false;
 
-extern volatile SENSOR_SETTINGS SensorSettings; //zsc.c
+//extern volatile SENSOR_SETTINGS SensorSettings; //zsc.c
 
 bool CheckConfigurationCANCode(void)
 {
@@ -80,18 +80,24 @@ void CodeProcessing(CAN_MSG* inMsg)
 		SendPressure();
 		return;
 	}
-
 	if (inMsg->data[0] == ANSWER_CODE) //55
 	{
 		SendPressure();
 		return;
 	}
 
+	// новые настройки CAN
+	if (inMsg->id == CONFIGURATION_CAN_ID)
+	{
+		SaveConfigData(inMsg);
+		// +переинициализация CAN
+	}
+
 	// код для настройки CAN:
 	uint32_t code = ( ((uint32_t)inMsg->data[4] << 24) | ((uint32_t)inMsg->data[5] << 16) | ((uint32_t)inMsg->data[6] << 8) | (uint32_t)inMsg->data[7] );
 	if (code == CONFIGURATION_CAN_CODE)
 	{
-		configurationCAN = true; // код принят и проверен
+		configurationCANCode = true; // код принят и проверен
 		return;
 	}
 	// код для настройки пределов:
@@ -137,7 +143,8 @@ void CodeProcessing(CAN_MSG* inMsg)
 				newSS.LowLimit = (uint16_t)(inMsg->data[2]<<8) + (uint16_t)inMsg->data[3];
 				newSS.ChangeTime = (uint16_t)(inMsg->data[4]<<8) + (uint16_t)inMsg->data[5];
 
-				SaveFlashSensorSettings(newSS);
+				SaveSensorSettings(newSS);
+//				SaveFlashSensorSettings(newSS);
 				SendLimitsAndValueZSC();
 				break;
 			}
@@ -148,7 +155,8 @@ void CodeProcessing(CAN_MSG* inMsg)
 				newSS.HighLimit = (uint16_t)(inMsg->data[2]<<8) + (uint16_t)inMsg->data[3];
 				newSS.ChangeTime = (uint16_t)(inMsg->data[4]<<8) + (uint16_t)inMsg->data[5];
 
-				SaveFlashSensorSettings(newSS);
+				SaveSensorSettings(newSS);
+//				SaveFlashSensorSettings(newSS);
 				SendLimitsAndValueZSC();
 				break;
 			}
@@ -160,7 +168,8 @@ void CodeProcessing(CAN_MSG* inMsg)
 				newSS.HighLimit = (uint16_t)(inMsg->data[4]<<8) + (uint16_t)inMsg->data[5];
 				newSS.ChangeTime = (uint16_t)(inMsg->data[6]<<8) + (uint16_t)inMsg->data[7];
 
-				SaveFlashSensorSettings(newSS);
+				SaveSensorSettings(newSS);
+//				SaveFlashSensorSettings(newSS);
 				SendLimitsAndValueZSC();
 				break;
 			}

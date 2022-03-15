@@ -25,6 +25,7 @@ bool InitCAN(PCONFIG_CAN pdata);
 bool ConfigFilterCAN(PCONFIG_CAN pdata);
 bool CheckConfigData(PCONFIG_CAN pdata);
 void ResetConfigCAN(void);
+bool SaveConfigData(CAN_MSG* msg);
 bool CAN_Send(CAN_MSG * msg);
 
 #endif /* INC_CAN_H_ */

@@ -22,8 +22,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-//#include <stdio.h>
-//#include <queue.h>
 #include "can.h"
 /* USER CODE END Includes */
 
@@ -51,11 +49,6 @@ osThreadId TaskZSCHandle;
 osThreadId TaskFLASHHandle;
 osMessageQId RxQueueCANHandle;
 /* USER CODE BEGIN PV */
-//CAN_TxHeaderTypeDef TxHeader;
-//CAN_RxHeaderTypeDef RxHeader;
-//uint8_t TxData[8];// = {0,};
-//uint8_t RxData[8];
-//uint32_t TxMailbox = 0;
 
 /* USER CODE END PV */
 
@@ -181,10 +174,14 @@ int main(void)
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
+//  union FlashData1 WriteBuf;
+//  union FlashData1 ReadBuf;
+//  WriteBuf.DeviceConfig.ConfigCAN.ID = 1;
+//    WriteBuf.DeviceConfig.Sensor.Level = 2;
+//    WriteBuf.DeviceConfig.WriteCounter = 3;
+//    WriteBuf.DeviceConfig.Crc = 4;
   while (1)
   {
-
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -384,12 +381,71 @@ void StartMsgProcessingTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-	  if (pdTRUE == xQueueReceive(RxQueueCANHandle, &msg, 0))
+	  //1 проба CRC на маленькой структуре
+//	  typedef struct test {
+//	  	uint32_t word;
+//	  	uint32_t crc;
+//	  } test;
+//
+//	  union flashTest {
+//	  	test Test;
+//	  	uint32_t DataWords[2];
+//	  };
+//	  union flashTest ft;
+//
+//	  ft.Test.word=12345675;
+//	  ft.Test.crc=0;
+//	  uint32_t crc = HAL_CRC_Calculate(&hcrc, &ft.Test.word, 1);
+//	  printf("crc 0: %lu\n",crc);
+//
+//	  ft.Test.crc = crc;
+//	  crc = HAL_CRC_Calculate(&hcrc, (uint32_t *)ft.DataWords, 2);
+//	  printf("crc 1: %lu\n",crc);
+
+//	  ft.Test.crc = 0;
+//	  crc = HAL_CRC_Calculate(&hcrc, (uint32_t *)ft.DataWords, 1);
+//	  printf("crc 2: %lu\n",crc);
+	  // отладка памяти
+
+	  //2 чтобы это работало на большой нужно все структуры выровнить по 32, crc в структуре поставить последним, при запи считать без crc (длинна-1), а при приеме с crc
+//	  union FlashData CurrentConfig;
+//		CurrentConfig.DeviceConfig.WriteCounter = 0;
+//		CurrentConfig.DeviceConfig.Crc = 0x0;
+//
+//		CurrentConfig.DeviceConfig.ConfigCAN.BaudRate = 25;
+//		CurrentConfig.DeviceConfig.ConfigCAN.ID = 0;
+//		CurrentConfig.DeviceConfig.ConfigCAN.Tseg1 = 12;
+//		CurrentConfig.DeviceConfig.ConfigCAN.Tseg2 = 1;
+//		CurrentConfig.DeviceConfig.ConfigCAN.UpLimit = 0;
+//
+//		CurrentConfig.DeviceConfig.Sensor.ChangeTime = 0;
+//		CurrentConfig.DeviceConfig.Sensor.HighLimit = 0; //todo нормальные установки
+//		CurrentConfig.DeviceConfig.Sensor.LowLimit = 0;
+//
+//	  uint32_t crc = HAL_CRC_Calculate(&hcrc, (uint32_t *)CurrentConfig.DataWords, FLASH_DATA_SIZE-1); // crc только для данных
+//
+//	  printf("crc 1: %lu\n",crc); // некоторое число
+//
+//	  CurrentConfig.DeviceConfig.Crc = crc; //кладем в общее сообщение
+//	  crc = HAL_CRC_Calculate(&hcrc, (uint32_t *)CurrentConfig.DataWords, FLASH_DATA_SIZE); // и считаем вместе с ним
+//	  printf("crc 2: %lu\n",crc); // тут 0
+
+	  //3
+	  ReadCurrentConfigFromFlash();
+	  SENSOR_SETTINGS newSS = GetSensorSettings();
+	  newSS.ChangeTime++;
+	  newSS.HighLimit++;
+	  newSS.LowLimit++;
+	  SaveSensorSettings(newSS);
+	  SaveCurrentConfigToFlash(); //+
+
+	  // а это рабочее
+	  /*if (pdTRUE == xQueueReceive(RxQueueCANHandle, &msg, 0))
 	  {
-		  printf("Task Receive msg: 0x%X\n", msg.id);
+		  printf("Message processing task: 0x%X\n", msg.id);
 		  CodeProcessing(&msg);
-	  }
-		osDelay(1);
+	  }*/
+		osDelay(10000);
   }
   /* USER CODE END 5 */
 }
