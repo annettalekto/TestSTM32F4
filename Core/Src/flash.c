@@ -7,19 +7,17 @@
 
 #include "flash.h"
 
-void ReadConfig(uint32_t *RxBuf);
-void EraseFlash(void);
-void WriteConfig(uint32_t *WxBuf);
-bool WriteDataToFlash(void);
+void ReadFlash(uint32_t *RxBuf);
+void EraseSectorFlash(void);
+void WriteFlash(uint32_t *WxBuf);
+bool WriteConfigToFlash(void);
 
 extern CRC_HandleTypeDef hcrc;
 bool StartWrite = false;
 
-//SENSOR_SETTINGS SensorSettings;	// структуры для работы, в них читаются сохраненные в памяти параметры при запуске МК
-//CONFIG_CAN ConfigCAN;			// при записписи параметров в память ...
 union FlashData CurrentConfig;
 
-// первая запись
+// Первая инициализация (когда в Flash нет данных)
 void InitCurrentConfig(void)
 {
 	CurrentConfig.DeviceConfig.WriteCounter = 0;
@@ -36,11 +34,11 @@ void InitCurrentConfig(void)
 	CurrentConfig.DeviceConfig.Sensor.LowLimit = 0;
 }
 
-// чтение данных в глоб.структуру по одному адресу, при иниц. МК
+// Читать текущую конфигурацию из памяти
 bool ReadCurrentConfigFromFlash(void)
 {
 	union FlashData rxBuf;
-	ReadConfig(rxBuf.DataWords);
+	ReadFlash(rxBuf.DataWords);
 
 	uint32_t crc = HAL_CRC_Calculate(&hcrc, (uint32_t *)rxBuf.DataWords, FLASH_DATA_SIZE);// для всего сообщения
 	if(crc == 0)
@@ -51,7 +49,7 @@ bool ReadCurrentConfigFromFlash(void)
 	return false;
 }
 
-//  сохранить текущую конфигурацию в память (сохранить все изменения CurrentConfig перед этим)
+// Сохранить текущую конфигурацию в память (сохранить все изменения в CurrentConfig перед этим)
 void SaveCurrentConfigToFlash(void)
 {
 	StartWrite = true;
@@ -63,7 +61,17 @@ uint32_t GetConfigCANID(void)
 {
 	return CurrentConfig.DeviceConfig.ConfigCAN.ID;
 }
-// добавить получение и сохранени
+
+CONFIG_CAN GetConfigCAN(void)
+{
+	return CurrentConfig.DeviceConfig.ConfigCAN;
+}
+
+void SaveConfigCAN(CONFIG_CAN newCC)
+{
+	CurrentConfig.DeviceConfig.ConfigCAN = newCC;
+}
+
 // --------------------------- пределы датчика ------------------------------ //
 
 SENSOR_SETTINGS GetSensorSettings(void)
@@ -78,7 +86,7 @@ void SaveSensorSettings(SENSOR_SETTINGS newSS)
 
 // --------------------------------- FLASH --------------------------------- //
 
-void ReadConfig(uint32_t* RxBuf)
+void ReadFlash(uint32_t* RxBuf)
 {
 	uint32_t address = FLASH_CONFIG_START_ADDR;
 	int idx = 0;
@@ -109,7 +117,7 @@ void EraseSectorFlash(void)
   	}
 }
 
-void WriteConfig(uint32_t *WxBuf)
+void WriteFlash(uint32_t *WxBuf)
 {
 	uint32_t address = FLASH_CONFIG_START_ADDR;
 	int words = 0;
@@ -125,24 +133,15 @@ void WriteConfig(uint32_t *WxBuf)
 	}
 }
 
-/*uint32_t CalcCRC(uint32_t *WxBuf)
-{
-//	uint32_t CRCVal = HAL_CRC_Calculate(&hcrc, (uint32_t *)WxBuf, sizeof(WxBuf)/sizeof(uint32_t));
-	uint32_t CRCVal = HAL_CRC_Calculate(&hcrc, (uint32_t *)WxBuf, FLASH_DATA_SIZE);
-	return CRCVal;
-}*/
-
-
-bool WriteDataToFlash(void)
+// все настройки CurrentConfig сохранить до вызова функции
+bool WriteConfigToFlash(void)
 {
 	bool ok;
 	union FlashData rxBuf;
 
-	// проверить изменилась ли конфигурация?
-	ReadConfig(rxBuf.DataWords);
+	ReadFlash(rxBuf.DataWords);
 	if(rxBuf.DataWords != CurrentConfig.DataWords)
 	{
-		// все настройки CurrentConfig сохранить до вызова функции
 		CurrentConfig.DeviceConfig.WriteCounter++;
 		CurrentConfig.DeviceConfig.Crc = 0;
 		uint32_t crc = HAL_CRC_Calculate(&hcrc, (uint32_t *)CurrentConfig.DataWords, FLASH_DATA_SIZE-1); //только для данных
@@ -153,8 +152,7 @@ bool WriteDataToFlash(void)
 			printf("\tERROR Flash unlock!\n");
 		}
 		EraseSectorFlash();
-//		ReadConfig(rxBuf.DataWords); //отладка
-		WriteConfig(CurrentConfig.DataWords);
+		WriteFlash(CurrentConfig.DataWords);
 		HAL_FLASH_Lock();
 	}
 
@@ -163,6 +161,12 @@ bool WriteDataToFlash(void)
 }
 
 
+/*uint32_t CalcCRC(uint32_t *WxBuf)
+{
+//	uint32_t CRCVal = HAL_CRC_Calculate(&hcrc, (uint32_t *)WxBuf, sizeof(WxBuf)/sizeof(uint32_t));
+	uint32_t CRCVal = HAL_CRC_Calculate(&hcrc, (uint32_t *)WxBuf, FLASH_DATA_SIZE);
+	return CRCVal;
+}*/
 
 
 /*
@@ -198,23 +202,19 @@ void StartTaskFLASH(void const * argument)
   {
 	  if(StartWrite)
 	  {
-		  ok = WriteDataToFlash();
-		  // выставить или сбросить ошибки
-		  // todo отправить сообщение об окончании записи
+		  ok = WriteConfigToFlash();
 		  StartWrite = false;
+		  // выставить или сбросить ошибки
 		  osDelay(3000);
+		  // todo отправить сообщение об окончании записи
 	  }
-	  // (не подходит) 1 постоянно считывать флэш и сравнивать со структурой, если разные значит нужно сохранить
-	  // 2 сохранять по флагу
-
-	  // сохранение при: режим настроек, пришли "верные" настройки + сообщение было с пометкой "сохранить в память"
 
 	  // сохранить в 3 местах
 	  // проверить сохранение с CRC
 	  // отправить ответное сообщение о завершении сохранения
 
 
-    osDelay(2000);
+    osDelay(500);
   }
   /* USER CODE END StartTaskFLASH */
 }

@@ -155,17 +155,16 @@ int main(void)
 	  // ждем прихода кода для настройки
 	  if (CheckConfigurationCANCode())
 	  {
-		// todo
-		// 2-инит кан 25,0 ждать настройки,
-		// записать в память зачем то
-		// не переписывать пределы!
-
+		  ResetCAN(); // переинициализация, ждем настройки
 		  ResetConfigurationCANCode();
 	  }
   }
   HAL_GPIO_WritePin(RedLight_GPIO_Port, RedLight_Pin, 0);
   HAL_GPIO_WritePin(GreenLigh_GPIO_Port, GreenLigh_Pin, 0);
-  // todo если код настройки не пришел, инициализируемя из памяти
+
+  // если код настройки не пришел, инициализируемя из памяти
+  InitCAN_FlashConfig();
+
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
@@ -242,8 +241,10 @@ static void MX_CAN1_Init(void)
 {
 
   /* USER CODE BEGIN CAN1_Init 0 */
-  // после вкл питания на ~1 сек делаем 25 кбит/сек �?Д 0, фильтр на  прием кодов 7FF
-  //предделитель 80 при APB1 = 32МГц, на скорость 25: 32 000/25 = 1280; 1280 = 80 * 16
+
+  // после вкл питания на ~1 сек делаем 25 кбит/сек  ИД 0, фильтр на прием кодов 7FF.
+  // предделитель 80 при APB1 = 32МГц, на скорость 25: 32 000/25 = 1280; 1280 = 80 * 16.
+
 	CAN_FilterTypeDef  sFilterConfig;
 
   /* USER CODE END CAN1_Init 0 */
@@ -381,55 +382,6 @@ void StartMsgProcessingTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-	  //1 проба CRC на маленькой структуре
-//	  typedef struct test {
-//	  	uint32_t word;
-//	  	uint32_t crc;
-//	  } test;
-//
-//	  union flashTest {
-//	  	test Test;
-//	  	uint32_t DataWords[2];
-//	  };
-//	  union flashTest ft;
-//
-//	  ft.Test.word=12345675;
-//	  ft.Test.crc=0;
-//	  uint32_t crc = HAL_CRC_Calculate(&hcrc, &ft.Test.word, 1);
-//	  printf("crc 0: %lu\n",crc);
-//
-//	  ft.Test.crc = crc;
-//	  crc = HAL_CRC_Calculate(&hcrc, (uint32_t *)ft.DataWords, 2);
-//	  printf("crc 1: %lu\n",crc);
-
-//	  ft.Test.crc = 0;
-//	  crc = HAL_CRC_Calculate(&hcrc, (uint32_t *)ft.DataWords, 1);
-//	  printf("crc 2: %lu\n",crc);
-	  // отладка памяти
-
-	  //2 чтобы это работало на большой нужно все структуры выровнить по 32, crc в структуре поставить последним, при запи считать без crc (длинна-1), а при приеме с crc
-//	  union FlashData CurrentConfig;
-//		CurrentConfig.DeviceConfig.WriteCounter = 0;
-//		CurrentConfig.DeviceConfig.Crc = 0x0;
-//
-//		CurrentConfig.DeviceConfig.ConfigCAN.BaudRate = 25;
-//		CurrentConfig.DeviceConfig.ConfigCAN.ID = 0;
-//		CurrentConfig.DeviceConfig.ConfigCAN.Tseg1 = 12;
-//		CurrentConfig.DeviceConfig.ConfigCAN.Tseg2 = 1;
-//		CurrentConfig.DeviceConfig.ConfigCAN.UpLimit = 0;
-//
-//		CurrentConfig.DeviceConfig.Sensor.ChangeTime = 0;
-//		CurrentConfig.DeviceConfig.Sensor.HighLimit = 0; //todo нормальные установки
-//		CurrentConfig.DeviceConfig.Sensor.LowLimit = 0;
-//
-//	  uint32_t crc = HAL_CRC_Calculate(&hcrc, (uint32_t *)CurrentConfig.DataWords, FLASH_DATA_SIZE-1); // crc только для данных
-//
-//	  printf("crc 1: %lu\n",crc); // некоторое число
-//
-//	  CurrentConfig.DeviceConfig.Crc = crc; //кладем в общее сообщение
-//	  crc = HAL_CRC_Calculate(&hcrc, (uint32_t *)CurrentConfig.DataWords, FLASH_DATA_SIZE); // и считаем вместе с ним
-//	  printf("crc 2: %lu\n",crc); // тут 0
-
 	  //3
 	  ReadCurrentConfigFromFlash();
 	  SENSOR_SETTINGS newSS = GetSensorSettings();
@@ -445,7 +397,7 @@ void StartMsgProcessingTask(void const * argument)
 		  printf("Message processing task: 0x%X\n", msg.id);
 		  CodeProcessing(&msg);
 	  }*/
-		osDelay(10000);
+		osDelay(1000);
   }
   /* USER CODE END 5 */
 }

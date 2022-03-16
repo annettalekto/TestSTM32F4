@@ -12,9 +12,7 @@ bool SendLimits();
 bool SendLimitsAndValueZSC();
 
 QueueHandle_t rxQueue = NULL;
-bool configurationCANCode = false;
-
-//extern volatile SENSOR_SETTINGS SensorSettings; //zsc.c
+bool configurationCANCode = false;	// true если пришел запрос на изменение конф. CAN
 
 bool CheckConfigurationCANCode(void)
 {
@@ -80,7 +78,7 @@ void CodeProcessing(CAN_MSG* inMsg)
 		SendPressure();
 		return;
 	}
-	if (inMsg->data[0] == ANSWER_CODE) //55
+	if (inMsg->data[0] == ANSWER_CODE)
 	{
 		SendPressure();
 		return;
@@ -89,21 +87,26 @@ void CodeProcessing(CAN_MSG* inMsg)
 	// новые настройки CAN
 	if (inMsg->id == CONFIGURATION_CAN_ID)
 	{
-		SaveConfigData(inMsg);
-		// +переинициализация CAN
+		CONFIG_CAN cf;
+		if (GetConfigCANfromMsg(inMsg, &cf))
+		{
+			SaveConfigCAN(cf);
+			InitCAN(&cf);
+		}
+		return;
 	}
 
 	// код для настройки CAN:
-	uint32_t code = ( ((uint32_t)inMsg->data[4] << 24) | ((uint32_t)inMsg->data[5] << 16) | ((uint32_t)inMsg->data[6] << 8) | (uint32_t)inMsg->data[7] );
+	uint32_t code = ( ((uint32_t)inMsg->data[4] << 24) | ((uint32_t)inMsg->data[5] << 16)
+					| ((uint32_t)inMsg->data[6] << 8) | (uint32_t)inMsg->data[7] );
 	if (code == CONFIGURATION_CAN_CODE)
 	{
-		configurationCANCode = true; // код принят и проверен
+		configurationCANCode = true;
 		return;
 	}
 	// код для настройки пределов:
 	if (code == CONFIGURATION_LIMITS_CODE)
 	{
-		// ответить
 		SendLimits();
 		return;
 	}
@@ -113,63 +116,63 @@ void CodeProcessing(CAN_MSG* inMsg)
 	{
 		switch (inMsg->data[1])
 		{
-			case LIMIT_CALIBRATION_CODE: //aa aa
+			case LIMIT_CALIBRATION_CODE:
 			{
 				SendLimitsAndValueZSC();
 				break;
 			}
 
-			case LOW_LIMIT_CODE://aa 05
+			case LOW_LIMIT_CODE:
 			{
 				SENSOR_SETTINGS newSS = GetSensorSettings();
-				newSS.LowLimit = (uint16_t)(inMsg->data[2]<<8) + (uint16_t)inMsg->data[3];
+				newSS.LowLimit = (uint32_t)(inMsg->data[2]<<8) + (uint32_t)inMsg->data[3];
 				SaveSensorSettings(newSS);
 				SendLimitsAndValueZSC();
 				break;
 			}
 
-			case HIGH_LIMIT_CODE://aa 15
+			case HIGH_LIMIT_CODE:
 			{
 				SENSOR_SETTINGS newSS = GetSensorSettings();
-				newSS.HighLimit = (uint16_t)(inMsg->data[2]<<8) + (uint16_t)inMsg->data[3];
+				newSS.HighLimit = (uint32_t)(inMsg->data[2]<<8) + (uint32_t)inMsg->data[3];
 				SaveSensorSettings(newSS);
 				SendLimitsAndValueZSC();
 				break;
 			}
 
-			case LOW_LIMIT_SAVE_CODE://aa 25
+			case LOW_LIMIT_SAVE_CODE:
 			{
 				SENSOR_SETTINGS newSS = GetSensorSettings();
-				newSS.LowLimit = (uint16_t)(inMsg->data[2]<<8) + (uint16_t)inMsg->data[3];
-				newSS.ChangeTime = (uint16_t)(inMsg->data[4]<<8) + (uint16_t)inMsg->data[5];
+				newSS.LowLimit = (uint32_t)(inMsg->data[2]<<8) + (uint32_t)inMsg->data[3];
+				newSS.ChangeTime = (uint32_t)(inMsg->data[4]<<8) + (uint32_t)inMsg->data[5];
 
 				SaveSensorSettings(newSS);
-//				SaveFlashSensorSettings(newSS);
+				SaveCurrentConfigToFlash();
 				SendLimitsAndValueZSC();
 				break;
 			}
 
-			case HIGH_LIMIT_SAVE_CODE://aa 35
+			case HIGH_LIMIT_SAVE_CODE:
 			{
 				SENSOR_SETTINGS newSS = GetSensorSettings();
-				newSS.HighLimit = (uint16_t)(inMsg->data[2]<<8) + (uint16_t)inMsg->data[3];
-				newSS.ChangeTime = (uint16_t)(inMsg->data[4]<<8) + (uint16_t)inMsg->data[5];
+				newSS.HighLimit = (uint32_t)(inMsg->data[2]<<8) + (uint32_t)inMsg->data[3];
+				newSS.ChangeTime = (uint32_t)(inMsg->data[4]<<8) + (uint32_t)inMsg->data[5];
 
 				SaveSensorSettings(newSS);
-//				SaveFlashSensorSettings(newSS);
+				SaveCurrentConfigToFlash();
 				SendLimitsAndValueZSC();
 				break;
 			}
 
-			case ALL_LIMIT_SAVE_CODE://aa 45
+			case ALL_LIMIT_SAVE_CODE:
 			{
 				SENSOR_SETTINGS newSS = GetSensorSettings();
-				newSS.LowLimit = (uint16_t)(inMsg->data[2]<<8) + (uint16_t)inMsg->data[3];
-				newSS.HighLimit = (uint16_t)(inMsg->data[4]<<8) + (uint16_t)inMsg->data[5];
-				newSS.ChangeTime = (uint16_t)(inMsg->data[6]<<8) + (uint16_t)inMsg->data[7];
+				newSS.LowLimit = (uint32_t)(inMsg->data[2]<<8) + (uint32_t)inMsg->data[3];
+				newSS.HighLimit = (uint32_t)(inMsg->data[4]<<8) + (uint32_t)inMsg->data[5];
+				newSS.ChangeTime = (uint32_t)(inMsg->data[6]<<8) + (uint32_t)inMsg->data[7];
 
 				SaveSensorSettings(newSS);
-//				SaveFlashSensorSettings(newSS);
+				SaveCurrentConfigToFlash();
 				SendLimitsAndValueZSC();
 				break;
 			}
@@ -177,13 +180,6 @@ void CodeProcessing(CAN_MSG* inMsg)
 		}
 	}
 }
-
-/*
-ответные сообщения
-1 ответ на запрос (3 байта: пресчитанные данные 2 байта + ошибка)- отправлять в прерывании? где хранить данные?
-2 ответ границами в режиме настройки
-3 ответ границами и сырыми данными
-*/
 
 // Отправить ответ на удаленный запрос (давление + ошибка)
 bool SendPressure(void)
@@ -203,8 +199,8 @@ bool SendPressure(void)
 }
 
 
-// ответ 2 границы
-bool SendLimits()
+// Отправить границы
+bool SendLimits(void)
 {
   CAN_MSG msg;
   SENSOR_SETTINGS ss = GetSensorSettings();
@@ -225,7 +221,7 @@ bool SendLimits()
   return CAN_Send(&msg);
 }
 
-// ответ 3 границы и сырые данные
+// Отправить границы и сырые данные
 bool SendLimitsAndValueZSC()
 {
   CAN_MSG msg;

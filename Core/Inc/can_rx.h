@@ -17,8 +17,8 @@
 #define CONFIGURATION_CAN_ID		0x00
 
 // коды для настройки пределов давления
-#define ANSWER_CODE            0x55	// сообщения относятся к настройке 0
-#define LIMIT_CALIBRATION_CODE 0xAA	// сообщения относятся к настройке 1; отправить границы и значение
+#define ANSWER_CODE            0x55	// отправить давление (то же что запрос)
+#define LIMIT_CALIBRATION_CODE 0xAA	// отправить границы и значение
 #define LOW_LIMIT_CODE         0x05	// нижний предел, (без сохранения)
 #define HIGH_LIMIT_CODE        0x15	// верхний предел (без сохранения)
 #define LOW_LIMIT_SAVE_CODE    0x25	// нижний предел и дата, сохранить

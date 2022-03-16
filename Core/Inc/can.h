@@ -22,10 +22,9 @@ typedef struct can_msg
 
 void StartCAN(CAN_HandleTypeDef *hcan);
 bool InitCAN(PCONFIG_CAN pdata);
-bool ConfigFilterCAN(PCONFIG_CAN pdata);
-bool CheckConfigData(PCONFIG_CAN pdata);
-void ResetConfigCAN(void);
-bool SaveConfigData(CAN_MSG* msg);
+void ResetCAN(void);
+bool CheckConfigCAN(PCONFIG_CAN pdata);
+bool GetConfigCANfromMsg(CAN_MSG* msg, PCONFIG_CAN confData);
 bool CAN_Send(CAN_MSG * msg);
 
 #endif /* INC_CAN_H_ */

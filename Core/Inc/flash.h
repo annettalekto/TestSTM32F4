@@ -15,46 +15,20 @@
 
 #define FLASH_CONFIG_START_ADDR	FLASH_BANK2_SECTOR_15
 
-/*void ReadConfig(uint32_t *RxBuf);
-void EraseFlash(void);
-void WriteConfig(uint32_t *WxBuf);
-
-typedef struct {
-	uint32_t Level;
-} SensorType1;
-
-typedef struct {
-	uint32_t ID;
-} ConfigCanType1;
-
-typedef struct {
-	uint32_t WriteCounter;
-	uint32_t Crc;
-	SensorType1 Sensor;
-	ConfigCanType1 ConfigCAN;
-} DeviceConfigType1;
-
-union FlashData1 {
-	DeviceConfigType1 DeviceConfig; // кратно 64
-	uint32_t DataWords[4];
-};*/
-
-/////////////////////////////////// структуры стек:
-
 typedef struct ConfigDataCAN_
 {
-  uint32_t ID;              // при расширенноми идентификаторе старший бит старшего байта = 1
-  uint32_t BaudRate;        // скорость в кбит/с
-  uint32_t Tseg1;            // (Tseg1 - 1) точно -1?
-  uint32_t Tseg2;            // (Tseg2 - 1)
-  uint32_t UpLimit;          // не используется (зарезервировано)
+  uint32_t ID;			// идентификатор для запроса данных с датчика
+  uint32_t BaudRate;	// скорость в кбит/с
+  uint32_t Tseg1;		// TimeSeg1 - 1
+  uint32_t Tseg2;		// TimeSeg1 - 1
+  uint32_t UpLimit;		// не используется (зарезервировано)
 } CONFIG_CAN, *PCONFIG_CAN;
 
 typedef struct SensorSettings_
 {
-  uint32_t HighLimit;  // верхний предел измерения
-  uint32_t LowLimit;   // нижний предел измерения
-  uint32_t ChangeTime; // последняя подстройка (дата изменения пределов измерения)
+  uint32_t HighLimit;	// верхний предел измерения
+  uint32_t LowLimit;	// нижний предел измерения
+  uint32_t ChangeTime;	// последняя подстройка (дата изменения пределов измерения)
 } SENSOR_SETTINGS, *PSENSOR_SETTINGS;
 
 typedef struct
@@ -66,7 +40,7 @@ typedef struct
 } DeviceConfigType;
 
 #define FLASH_DATA_SIZE	10	// 10 по 32
-union FlashData {			// кратно 32
+union FlashData {			// кратно 32!
 	DeviceConfigType DeviceConfig;
 	uint32_t DataWords[FLASH_DATA_SIZE];
 };
@@ -76,9 +50,9 @@ bool ReadCurrentConfigFromFlash(void);
 void SaveCurrentConfigToFlash(void);
 
 uint32_t GetConfigCANID(void);
+CONFIG_CAN GetConfigCAN(void);
+void SaveConfigCAN(CONFIG_CAN newCC);
 SENSOR_SETTINGS GetSensorSettings(void);
 void SaveSensorSettings(SENSOR_SETTINGS newSS);
-
-
 
 #endif /* INC_FLASH_H_ */

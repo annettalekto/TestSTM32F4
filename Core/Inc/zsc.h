@@ -10,7 +10,7 @@
 
 #include "main.h"
 
-typedef struct DataZSC_ //переименовать
+typedef struct DataZSC_
 {
   uint8_t HighByte;
   uint8_t LowByte;

@@ -22,81 +22,91 @@ void StartCAN(CAN_HandleTypeDef *hcan)
 	}
 }
 
-// инициализация CAN
-bool InitCAN(PCONFIG_CAN pdata) // отладка закончилась туть todo1 переименовать
+// Инициализация CAN
+bool InitCAN(PCONFIG_CAN pdata)
 {
-	/*
-	 * тут рассчитывается скорость, выдавать в кан после расчета скорость на которую он собирается перейти (иниц пока нет)
-	 * выдавать скорость и др параметры в кан одним сообщением сразу после включения в нормальный режим (а надо ли?)
-	 * */
-	//предделитель 80 при APB1 = 32МГц, на скорость 25: 32 000/25 = 1280; 1280 = 80 * 16
-  uint32_t clk = HAL_RCC_GetPCLK1Freq()/1000;// = 32000
-  uint32_t quanta = (uint32_t)(1 + (pdata->Tseg1 + 1) + (pdata->Tseg2 + 1)); //16
-  uint32_t prescaler = clk / (quanta * pdata->BaudRate); // prescaler = (clk/1000) / (BR * Q)  -> 32 000 / 50 * 16 = 40
+	bool ok = true;
 
-  canHandle->Instance = CAN1;
-  canHandle->Init.Prescaler = prescaler;//80;
-  canHandle->Init.Mode = CAN_MODE_NORMAL;
-  canHandle->Init.SyncJumpWidth = CAN_SJW_1TQ;//??? для каких то скоростей понадобиться todo решить этот вопрос таблицей
-  canHandle->Init.TimeSeg1 = (pdata->Tseg1 << CAN_BTR_TS1_Pos);// CAN_BS1_13TQ = 0xC0000
-  canHandle->Init.TimeSeg2 = (pdata->Tseg2 << CAN_BTR_TS2_Pos);
-  canHandle->Init.TimeTriggeredMode = DISABLE;
-  canHandle->Init.AutoBusOff = ENABLE;
-  canHandle->Init.AutoWakeUp = DISABLE;
-  canHandle->Init.AutoRetransmission = DISABLE;
-  canHandle->Init.ReceiveFifoLocked = DISABLE;
-  canHandle->Init.TransmitFifoPriority = DISABLE;
+	// если предделитель 80 и APB1 = 32МГц, то на скорость 25: 32 000/25 = 1280; 1280 = 80 * 16
+	uint32_t clk = HAL_RCC_GetPCLK1Freq()/1000;									// APB1 = 32000
+	uint32_t quanta = (uint32_t)(1 + (pdata->Tseg1 + 1) + (pdata->Tseg2 + 1));	// 16
+	uint32_t prescaler = clk / (quanta * pdata->BaudRate);						// prescaler = (clk/1000) / (BR * Q)  -> 32 000 / 50 * 16 = 40
 
-  if (HAL_CAN_Init(canHandle) != HAL_OK)
-  {
-    printf("Init CAN ERROR\n");
-    return false;
-  }
+	canHandle->Instance = CAN1;
+	canHandle->Init.Prescaler = prescaler;			//80;
+	canHandle->Init.Mode = CAN_MODE_NORMAL;
+	canHandle->Init.SyncJumpWidth = CAN_SJW_1TQ;	//? для каких то скоростей понадобиться todo решить этот вопрос таблицей
+	canHandle->Init.TimeSeg1 = (pdata->Tseg1 << CAN_BTR_TS1_Pos); // CAN_BS1_13TQ = 0xC0000
+	canHandle->Init.TimeSeg2 = (pdata->Tseg2 << CAN_BTR_TS2_Pos);
+	canHandle->Init.TimeTriggeredMode = DISABLE;
+	canHandle->Init.AutoBusOff = ENABLE;
+	canHandle->Init.AutoWakeUp = DISABLE;
+	canHandle->Init.AutoRetransmission = DISABLE;
+	canHandle->Init.ReceiveFifoLocked = DISABLE;
+	canHandle->Init.TransmitFifoPriority = DISABLE;
 
-  return true;
+	if (HAL_CAN_Init(canHandle) != HAL_OK)
+	{
+		printf("Init CAN ERROR\n");
+		ok = false;
+	}
+
+	// конфиг. фильтров на прием только одного ИД
+	CAN_FilterTypeDef sFilterConfig;
+	uint32_t id = (uint32_t)pdata->ID;
+
+	sFilterConfig.FilterBank = 0;
+	sFilterConfig.FilterMode = CAN_FILTERMODE_IDLIST;
+	sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+	sFilterConfig.FilterIdHigh = id << 5;
+	sFilterConfig.FilterIdLow = 0x0000;
+	sFilterConfig.FilterMaskIdHigh = id << 5; // повторяется чтобы не принимался 0
+	sFilterConfig.FilterMaskIdLow = 0x0000;
+	sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+	sFilterConfig.FilterActivation = ENABLE;
+
+	if(HAL_CAN_ConfigFilter(canHandle, &sFilterConfig) != HAL_OK)
+	{
+		printf("Config filter CAN ERROR\n");
+		ok = false;
+	}
+
+	return ok;
 }
 
-// todo1 нет смысла отделять
-bool ConfigFilterCAN(PCONFIG_CAN pdata) // на прием одного ИД
-{
-  CAN_FilterTypeDef sFilterConfig;
-  uint32_t id = (uint32_t)pdata->ID;
-
-  sFilterConfig.FilterBank = 0;
-  sFilterConfig.FilterMode = CAN_FILTERMODE_IDLIST;
-  sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-  sFilterConfig.FilterIdHigh = id << 5;
-  sFilterConfig.FilterIdLow = 0x0000;
-  sFilterConfig.FilterMaskIdHigh = id << 5; // повторяется чтобы не принимался 0
-  sFilterConfig.FilterMaskIdLow = 0x0000;
-  sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
-  sFilterConfig.FilterActivation = ENABLE;
-
-  if(HAL_CAN_ConfigFilter(canHandle, &sFilterConfig) != HAL_OK)
-  {
-	printf("Config filter CAN ERROR\n");
-    return false;
-  }
-
-  return true;
-}
-
-void ResetConfigCAN(void)
+// Инициализировать CAN на начальные параметры: 25кбит/с ИД 0
+void ResetCAN(void)
 {
 	CONFIG_CAN configData;
-//предделитель 80 при APB1 = 32МГц, на скорость 25: 32 000/25 = 1280; 1280 = 80 * 16
-	configData.BaudRate = 25;
-	configData.ID = 0x01;
-	configData.Tseg1 = 12; // CAN_BS1_13TQ
-	configData.Tseg2 = 1; // CAN_BS2_2TQ
-	configData.UpLimit = 0;
-	InitCAN(&configData);
 
-	// фильтры?
+	// Для предделителя 80 и APB1 = 32МГц, скорость 25 кбит\с: 32 000/25 = 1280; 1280 = 80 * 16
+	configData.BaudRate = 25;
+	configData.ID = CONFIGURATION_CAN_ID;
+	configData.Tseg1 = 12;	// CAN_BS1_13TQ
+	configData.Tseg2 = 1;	// CAN_BS2_2TQ
+	configData.UpLimit = 0;
+	// записать в память? todo
+	InitCAN(&configData);
 }
 
-// проверка данных для инициализации CAN.
-bool CheckConfigData(PCONFIG_CAN pdata)
+void InitCAN_FlashConfig(void)
+{
+	bool ok;
+	CONFIG_CAN conf = GetConfigCAN();
+	ok = CheckConfigCAN(conf);
+	if(ok)
+	{
+		InitCAN(conf);
+	}
+	else
+	{
+		// если данные не верные или ни разу не были записаны еще
+		ResetCAN();
+	}
+}
+
+// Проверка данных для инициализации CAN.
+bool CheckConfigCAN(PCONFIG_CAN pdata)
 {
   uint32_t id = pdata->ID;
   uint32_t bitSeg1 = pdata->Tseg1 + 1; // 1 - 16
@@ -106,7 +116,7 @@ bool CheckConfigData(PCONFIG_CAN pdata)
   bool ok = false;
   if((quanta >= 5) && (quanta <= 25)) //todo magical numbers
   {
-    if((bitSeg1 > 1) && (bitSeg1 <= 16))
+    if((bitSeg1 > 1) && (bitSeg1 <= 16)) // magical namber todo
     {
       if((bitSeg2 >= 1) && (bitSeg2 <= 8))
       {
@@ -124,24 +134,27 @@ bool CheckConfigData(PCONFIG_CAN pdata)
   return ok;
 }
 
-bool SaveConfigData(CAN_MSG* msg)
+// Получить данные для конфигурации CAN из сообщения
+bool GetConfigCANfromMsg(CAN_MSG* msg, PCONFIG_CAN confData)
 {
-	CONFIG_CAN confData;
+	bool ok;
+	CONFIG_CAN cd;
 
-	confData.ID = (uint32_t)( ((uint32_t)msg->data[0] << 24) | ((uint32_t)msg->data[1] << 16) | ((uint32_t)msg->data[2] << 8) | ((uint32_t)msg->data[3]) );
-	confData.BaudRate = ( ((uint32_t) msg->data[4] << 8) | ((uint32_t) msg->data[5]) );
-	confData.Tseg1 = ((uint32_t) msg->data[6] >> 4);
-	confData.Tseg2 = ((uint32_t) msg->data[6] & 0x07);
-	confData.UpLimit = ((uint32_t) msg->data[7]);
-	// фильтры опущены todo
+	cd.ID = (uint32_t)( ((uint32_t)msg->data[0] << 24) | ((uint32_t)msg->data[1] << 16) | ((uint32_t)msg->data[2] << 8) | ((uint32_t)msg->data[3]) );
+	cd.BaudRate = ( ((uint32_t) msg->data[4] << 8) | ((uint32_t) msg->data[5]) );
+	cd.Tseg1 = ((uint32_t) msg->data[6] >> 4);
+	cd.Tseg2 = ((uint32_t) msg->data[6] & 0x07);
+	cd.UpLimit = ((uint32_t) msg->data[7]);
 	// обработка расширенного ИД опущена todo
 
-	if (CheckConfigData(&confData))
+	ok = CheckConfigData(confData);
+	if(ok)
 	{
-		// todo +сохранение
-		return true;
+		*confData = cd;
 	}
-	return false;
+	// SaveConfigCAN(confData);
+
+	return ok;
 }
 
 bool CAN_Send(CAN_MSG* msg)
@@ -155,8 +168,8 @@ bool CAN_Send(CAN_MSG* msg)
 
   TxHeader.StdId = msg->id;
   TxHeader.ExtId = 0;
-  TxHeader.RTR = CAN_RTR_DATA;//msg->rtr; нет запросов
-  TxHeader.IDE = CAN_ID_STD; // нет расширенных
+  TxHeader.RTR = CAN_RTR_DATA;	// нет запросов
+  TxHeader.IDE = CAN_ID_STD;	// нет расширенных
   TxHeader.DLC = msg->len;
   TxHeader.TransmitGlobalTime = DISABLE;
 
