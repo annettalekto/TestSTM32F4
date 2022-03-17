@@ -17,22 +17,21 @@ bool StartWrite = false;
 
 union FlashData CurrentConfig;
 
-// Первая инициализация (когда в Flash нет данных)
-void InitCurrentConfig(void)
-{
-	CurrentConfig.DeviceConfig.WriteCounter = 0;
-	CurrentConfig.DeviceConfig.Crc = 0;
-
-	CurrentConfig.DeviceConfig.ConfigCAN.BaudRate = 25;
-	CurrentConfig.DeviceConfig.ConfigCAN.ID = 0;
-	CurrentConfig.DeviceConfig.ConfigCAN.Tseg1 = 12;
-	CurrentConfig.DeviceConfig.ConfigCAN.Tseg2 = 1;
-	CurrentConfig.DeviceConfig.ConfigCAN.UpLimit = 0;
-
-	CurrentConfig.DeviceConfig.Sensor.ChangeTime = 0;
-	CurrentConfig.DeviceConfig.Sensor.HighLimit = 0; //todo нормальные установки
-	CurrentConfig.DeviceConfig.Sensor.LowLimit = 0;
-}
+//void InitCurrentConfig(void)
+//{
+//	CurrentConfig.DeviceConfig.WriteCounter = 0;
+//	CurrentConfig.DeviceConfig.Crc = 0;
+//
+//	CurrentConfig.DeviceConfig.ConfigCAN.BaudRate = 25;
+//	CurrentConfig.DeviceConfig.ConfigCAN.ID = 0;
+//	CurrentConfig.DeviceConfig.ConfigCAN.Tseg1 = 12;
+//	CurrentConfig.DeviceConfig.ConfigCAN.Tseg2 = 1;
+//	CurrentConfig.DeviceConfig.ConfigCAN.UpLimit = 0;
+//
+//	CurrentConfig.DeviceConfig.Sensor.ChangeTime = 0;
+//	CurrentConfig.DeviceConfig.Sensor.HighLimit = 0; //todo нормальные установки
+//	CurrentConfig.DeviceConfig.Sensor.LowLimit = 0;
+//}
 
 // Читать текущую конфигурацию из памяти
 bool ReadCurrentConfigFromFlash(void)

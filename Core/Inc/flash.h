@@ -45,7 +45,7 @@ union FlashData {			// кратно 32!
 	uint32_t DataWords[FLASH_DATA_SIZE];
 };
 
-void InitCurrentConfig(void);
+//void InitCurrentConfig(void);
 bool ReadCurrentConfigFromFlash(void);
 void SaveCurrentConfigToFlash(void);
 

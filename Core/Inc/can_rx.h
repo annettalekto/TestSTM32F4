@@ -25,8 +25,7 @@
 #define HIGH_LIMIT_SAVE_CODE   0x35	// верхний предел и дата, сохранить
 #define ALL_LIMIT_SAVE_CODE    0x45	// в и н пределы, дата, сохранить
 
-bool CheckConfigurationCANCode(void);
-void ResetConfigurationCANCode(void);
+bool SettingsMode(void);
 void CAN_RegisterRxQueue(osMessageQId q);
 bool ReadQueueCAN(CAN_MSG* pmsg);
 void CodeProcessing(CAN_MSG* inMsg);

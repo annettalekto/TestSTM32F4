@@ -12,16 +12,30 @@ bool SendLimits();
 bool SendLimitsAndValueZSC();
 
 QueueHandle_t rxQueue = NULL;
-bool configurationCANCode = false;	// true если пришел запрос на изменение конф. CAN
+bool configurationCANCode = false;
 
-bool CheckConfigurationCANCode(void)
-{
-	return configurationCANCode;
-}
 
-void ResetConfigurationCANCode(void)
+bool SettingsMode(void)
 {
-	configurationCANCode = false;
+	// CAN изначально настроен на прием кода CONFIGURATION_CAN_CODE
+	// ~1 сек ждем код, если код пришел переконфигурировать CAN и ждать настроейки (до перезагрузки),
+	HAL_GPIO_WritePin(RedLight_GPIO_Port, RedLight_Pin, 1);
+	HAL_GPIO_WritePin(GreenLigh_GPIO_Port, GreenLigh_Pin, 1);
+
+	uint32_t startTime = HAL_GetTick();
+	while((HAL_GetTick() - startTime) < 1500)
+	{
+	  if(configurationCANCode) // пришел код CONFIGURATION_CAN_CODE на изменение конф. CAN
+	  {
+		  ResetCAN(); // переинициализация, ждем настройки
+		  configurationCANCode = false;
+		  return true;
+	  }
+	}
+	HAL_GPIO_WritePin(RedLight_GPIO_Port, RedLight_Pin, 0);
+	HAL_GPIO_WritePin(GreenLigh_GPIO_Port, GreenLigh_Pin, 0);
+
+	return false;
 }
 
 void CAN_RegisterRxQueue(osMessageQId q)

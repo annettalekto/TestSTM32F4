@@ -105,7 +105,8 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   StartCAN(&hcan1);
-  // todo получить данные из памяти
+  ReadCurrentConfigFromFlash();
+
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -144,26 +145,11 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+
   printf("START\n");
 
-  HAL_GPIO_WritePin(RedLight_GPIO_Port, RedLight_Pin, 1);
-  HAL_GPIO_WritePin(GreenLigh_GPIO_Port, GreenLigh_Pin, 1);
-
-  uint32_t startTime = HAL_GetTick();
-  while((HAL_GetTick() - startTime) < 1500)
-  {
-	  // ждем прихода кода для настройки
-	  if (CheckConfigurationCANCode())
-	  {
-		  ResetCAN(); // переинициализация, ждем настройки
-		  ResetConfigurationCANCode();
-	  }
-  }
-  HAL_GPIO_WritePin(RedLight_GPIO_Port, RedLight_Pin, 0);
-  HAL_GPIO_WritePin(GreenLigh_GPIO_Port, GreenLigh_Pin, 0);
-
-  // если код настройки не пришел, инициализируемя из памяти
-  InitCAN_FlashConfig();
+  if(!SettingsMode()) // если настройка не нужна, инициализируемя из памяти
+	  InitCAN_FlashConfig();
 
   /* USER CODE END RTOS_THREADS */
 
@@ -173,12 +159,7 @@ int main(void)
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-//  union FlashData1 WriteBuf;
-//  union FlashData1 ReadBuf;
-//  WriteBuf.DeviceConfig.ConfigCAN.ID = 1;
-//    WriteBuf.DeviceConfig.Sensor.Level = 2;
-//    WriteBuf.DeviceConfig.WriteCounter = 3;
-//    WriteBuf.DeviceConfig.Crc = 4;
+
   while (1)
   {
     /* USER CODE END WHILE */

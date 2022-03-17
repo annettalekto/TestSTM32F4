@@ -85,24 +85,23 @@ void ResetCAN(void)
 	configData.Tseg1 = 12;	// CAN_BS1_13TQ
 	configData.Tseg2 = 1;	// CAN_BS2_2TQ
 	configData.UpLimit = 0;
-	// записать в память? todo
+	// записать в память? todo при ош. данных в памяти?
 	InitCAN(&configData);
 }
 
 void InitCAN_FlashConfig(void)
 {
 	bool ok;
+
 	CONFIG_CAN conf = GetConfigCAN();
-	ok = CheckConfigCAN(conf);
+	ok = CheckConfigCAN(&conf);
 	if(ok)
-	{
-		InitCAN(conf);
-	}
+		InitCAN(&conf);
 	else
-	{
-		// если данные не верные или ни разу не были записаны еще
 		ResetCAN();
-	}
+
+	//todo выдать сообщ. об ош. по else
+	// если код пришел то резет, если не пришел, но данные в памяти испорчены, тоже резет
 }
 
 // Проверка данных для инициализации CAN.
@@ -147,7 +146,7 @@ bool GetConfigCANfromMsg(CAN_MSG* msg, PCONFIG_CAN confData)
 	cd.UpLimit = ((uint32_t) msg->data[7]);
 	// обработка расширенного ИД опущена todo
 
-	ok = CheckConfigData(confData);
+	ok = CheckConfigCAN(&cd);
 	if(ok)
 	{
 		*confData = cd;
